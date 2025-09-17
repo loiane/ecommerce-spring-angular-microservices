@@ -1,7 +1,7 @@
 package com.loiane.ecommerce.product.controller;
 
 import com.loiane.ecommerce.product.dto.product.*;
-import com.loiane.ecommerce.product.exception.*;
+import com.loiane.ecommerce.product.exception.BulkProductsNotFoundException;
 import com.loiane.ecommerce.product.mapper.ProductMapper;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.service.ProductService;
@@ -31,13 +31,9 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> findById(@PathVariable String id) {
-        try {
-            var product = productService.findById(id);
-            var response = productMapper.toResponse(product);
-            return ResponseEntity.ok(response);
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        }
+        var product = productService.findById(id); // ProductNotFoundException handled globally
+        var response = productMapper.toResponse(product);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
@@ -66,122 +62,70 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
-        try {
-            var entity = productMapper.toEntity(request);
-            
-            // Set category from repository
-            var category = categoryRepository.findById(request.categoryId())
-                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
-            entity.setCategory(category);
-            
-            var savedEntity = productService.createProduct(entity);
-            var response = productMapper.toResponse(savedEntity);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (DuplicateSkuException _) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        } catch (InactiveCategoryException _) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        } catch (IllegalArgumentException _) {
-            return ResponseEntity.badRequest().build();
-        }
+        var entity = productMapper.toEntity(request);
+        var category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        entity.setCategory(category);
+        var savedEntity = productService.createProduct(entity);
+        var response = productMapper.toResponse(savedEntity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable String id,
             @Valid @RequestBody UpdateProductRequest request) {
-        try {
-            var existingProduct = productService.findById(id);
-            productMapper.updateEntity(existingProduct, request);
-            var updatedEntity = productService.updateProduct(id, existingProduct);
-            var response = productMapper.toResponse(updatedEntity);
-            return ResponseEntity.ok(response);
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        } catch (DuplicateSkuException _) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        var existingProduct = productService.findById(id);
+        productMapper.updateEntity(existingProduct, request);
+        var updatedEntity = productService.updateProduct(id, existingProduct);
+        var response = productMapper.toResponse(updatedEntity);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/publish")
     public ResponseEntity<ProductResponse> publishProduct(@PathVariable String id) {
-        try {
-            var updatedProduct = productService.publishProduct(id);
-            var response = productMapper.toResponse(updatedProduct);
-            return ResponseEntity.ok(response);
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalOperationException _) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
+        var updatedProduct = productService.publishProduct(id);
+        var response = productMapper.toResponse(updatedProduct);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/discontinue")
     public ResponseEntity<ProductResponse> discontinueProduct(@PathVariable String id) {
-        try {
-            var updatedProduct = productService.discontinueProduct(id);
-            var response = productMapper.toResponse(updatedProduct);
-            return ResponseEntity.ok(response);
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        }
+        var updatedProduct = productService.discontinueProduct(id);
+        var response = productMapper.toResponse(updatedProduct);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/stock/reserve")
     public ResponseEntity<Void> reserveStock(
             @PathVariable String id,
             @RequestParam int quantity) {
-        try {
-            productService.reserveStock(id, quantity);
-            return ResponseEntity.ok().build();
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        } catch (InsufficientStockException _) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        } catch (IllegalArgumentException _) {
-            return ResponseEntity.badRequest().build();
-        }
+        productService.reserveStock(id, quantity);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/stock/release")
     public ResponseEntity<Void> releaseStock(
             @PathVariable String id,
             @RequestParam int quantity) {
-        try {
-            productService.releaseStock(id, quantity);
-            return ResponseEntity.ok().build();
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalArgumentException _) {
-            return ResponseEntity.badRequest().build();
-        }
+        productService.releaseStock(id, quantity);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/stock/confirm")
     public ResponseEntity<Void> confirmStock(
             @PathVariable String id,
             @RequestParam int quantity) {
-        try {
-            productService.confirmStock(id, quantity);
-            return ResponseEntity.ok().build();
-        } catch (ProductNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalArgumentException _) {
-            return ResponseEntity.badRequest().build();
-        }
+        productService.confirmStock(id, quantity);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/bulk/status")
     public ResponseEntity<Void> bulkUpdateStatus(@Valid @RequestBody BulkUpdateStatusRequest request) {
-        try {
-            int updatedCount = productService.bulkUpdateStatus(request.productIds(), request.status());
-            if (updatedCount > 0) {
-                return ResponseEntity.ok().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception _) {
-            return ResponseEntity.badRequest().build();
+        int updatedCount = productService.bulkUpdateStatus(request.productIds(), request.status());
+        if (updatedCount == 0) {
+            throw new BulkProductsNotFoundException("No matching products found for provided IDs");
         }
+        return ResponseEntity.ok().build();
     }
 }

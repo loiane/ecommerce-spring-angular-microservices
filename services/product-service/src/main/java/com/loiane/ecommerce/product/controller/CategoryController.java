@@ -1,8 +1,7 @@
 package com.loiane.ecommerce.product.controller;
 
 import com.loiane.ecommerce.product.dto.category.*;
-import com.loiane.ecommerce.product.exception.CategoryNotFoundException;
-import com.loiane.ecommerce.product.exception.DuplicateSlugException;
+import com.loiane.ecommerce.product.exception.CategoryDeletionConflictException; // Specific conflict exception
 import com.loiane.ecommerce.product.mapper.CategoryMapper;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.service.CategoryService;
@@ -36,57 +35,39 @@ public class CategoryController {
 
     @GetMapping("/{slug}")
     public ResponseEntity<CategoryResponse> getCategoryBySlug(@PathVariable String slug) {
-        try {
-            var category = categoryService.findBySlug(slug);
-            var response = categoryMapper.toResponse(category);
-            return ResponseEntity.ok(response);
-        } catch (CategoryNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        }
+        var category = categoryService.findBySlug(slug); // handled globally
+        var response = categoryMapper.toResponse(category);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CreateCategoryRequest request) {
-        try {
-            var entity = categoryMapper.toEntity(request);
-            var savedEntity = categoryService.createCategory(entity);
-            var response = categoryMapper.toResponse(savedEntity);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (DuplicateSlugException _) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        var entity = categoryMapper.toEntity(request);
+        var savedEntity = categoryService.createCategory(entity);
+        var response = categoryMapper.toResponse(savedEntity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable String id, 
             @Valid @RequestBody UpdateCategoryRequest request) {
-        
-        try {
-            var existingCategory = categoryService.findById(id);
-            categoryMapper.updateEntity(existingCategory, request);
-            var updatedEntity = categoryService.updateCategory(id, existingCategory);
-            var response = categoryMapper.toResponse(updatedEntity);
-            return ResponseEntity.ok(response);
-        } catch (CategoryNotFoundException _) {
-            return ResponseEntity.notFound().build();
-        }
+        var existingCategory = categoryService.findById(id);
+        categoryMapper.updateEntity(existingCategory, request);
+        var updatedEntity = categoryService.updateCategory(id, existingCategory);
+        var response = categoryMapper.toResponse(updatedEntity);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
-        try {
-            var category = categoryService.findById(id);
-            // Check if category has active products
-            long productCount = categoryService.countActiveProductsInCategory(id);
-            if (productCount > 0) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
-            }
-            
-            categoryRepository.delete(category); // Direct repository call for deletion
-            return ResponseEntity.noContent().build();
-        } catch (CategoryNotFoundException _) {
-            return ResponseEntity.notFound().build();
+        // Count check & delete logic should move to service eventually
+        var category = categoryService.findById(id);
+        long productCount = categoryService.countActiveProductsInCategory(id);
+        if (productCount > 0) {
+            throw new CategoryDeletionConflictException("Cannot delete category with active products");
         }
+        categoryRepository.delete(category);
+        return ResponseEntity.noContent().build();
     }
 }

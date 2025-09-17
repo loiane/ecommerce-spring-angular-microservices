@@ -12,6 +12,8 @@ import com.loiane.ecommerce.product.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -117,7 +118,12 @@ class ProductControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/products/{id}", PRODUCT_ID))
-                .andExpect(status().isNotFound());
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.status", is(404)))
+                                .andExpect(jsonPath("$.error", is("Not Found")))
+                                .andExpect(jsonPath("$.message", containsString(PRODUCT_ID)))
+                                .andExpect(jsonPath("$.path", is("/api/v1/products/" + PRODUCT_ID)))
+                                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(PRODUCT_ID);
     }
@@ -177,7 +183,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict()); // 409 Conflict for duplicate SKU
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("SKU")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(categoryRepository).findById(CATEGORY_ID); // Only controller calls it, service throws exception before validation
         verify(productRepository).existsBySku(GAMING_LAPTOP_SKU);
@@ -428,7 +439,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", containsString("Category not found")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(categoryRepository).findById("invalid-category-id");
         verifyNoInteractions(productRepository);
@@ -465,7 +481,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", containsString("inactive category")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(categoryRepository, atLeast(1)).findById("cat-1");
     }
@@ -488,7 +509,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(put("/api/v1/products/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId)))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
         verify(productRepository, never()).save(any(Product.class));
@@ -514,7 +540,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(put("/api/v1/products/{id}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("SKU")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId)))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository, atLeast(1)).findById(productId);
     }
@@ -528,7 +559,12 @@ class ProductControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/publish", productId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/publish")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
         verify(productRepository, never()).save(any(Product.class));
@@ -547,7 +583,12 @@ class ProductControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/publish", productId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", containsString("Cannot publish")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/publish")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
     }
@@ -561,7 +602,12 @@ class ProductControllerIntegrationTest {
 
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/discontinue", productId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/discontinue")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
         verify(productRepository, never()).save(any(Product.class));
@@ -581,33 +627,42 @@ class ProductControllerIntegrationTest {
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/stock/reserve", productId)
                         .param("quantity", String.valueOf(requestedQuantity)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(jsonPath("$.error", is("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("Insufficient")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/stock/reserve")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
     }
 
+        @Test
+        @DisplayName("Release stock invalid argument - Returns 400")
+        void releaseStockInvalidArgument() throws Exception {
+                // Given
+                var productId = "prod-1";
+                var product = buildSampleProduct(productId);
+                product.setReservedQuantity(5);
+                int requestedQuantity = 10; // More than reserved
+
+                when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+                // When & Then - Now handled by GlobalExceptionHandler mapping to 400
+                mockMvc.perform(put("/api/v1/products/{id}/stock/release", productId)
+                                                .param("quantity", String.valueOf(requestedQuantity)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.status", is(400)))
+                                .andExpect(jsonPath("$.error", is("Bad Request")))
+                                .andExpect(jsonPath("$.message", containsString("Cannot release")))
+                                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/stock/release")))
+                                .andExpect(jsonPath("$.timestamp", notNullValue()));
+
+                verify(productRepository).findById(productId);
+        }
+
     @Test
-    @DisplayName("Release stock invalid argument - Exception handling")
-    void releaseStockInvalidArgument() {
-        // Given
-        var productId = "prod-1";
-        var product = buildSampleProduct(productId);
-        product.setReservedQuantity(5);
-        int requestedQuantity = 10; // More than reserved
-
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-
-        // When & Then - The IllegalOperationException causes a 500 since controller doesn't handle it
-        assertThrows(Exception.class, () -> {
-            mockMvc.perform(put("/api/v1/products/{id}/stock/release", productId)
-                            .param("quantity", String.valueOf(requestedQuantity)));
-        });
-
-        verify(productRepository).findById(productId);
-    }
-
-    @Test
-    @DisplayName("Bulk update status no products found - Returns 404")
+    @DisplayName("Bulk update status no products found - Returns 404 ApiError")
     void bulkUpdateStatusNoProductsFound() throws Exception {
         // Given
         var request = new BulkUpdateStatusRequest(
@@ -617,14 +672,19 @@ class ProductControllerIntegrationTest {
 
         when(productRepository.findAllById(request.productIds())).thenReturn(Collections.emptyList());
 
-        // When & Then - Service returns 0 updated products, controller returns 404
+        // When & Then - Service returns 0 updated products, controller now throws BulkProductsNotFoundException -> 404 ApiError
         mockMvc.perform(put("/api/v1/products/bulk/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString("No matching products")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/bulk/status")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findAllById(request.productIds());
-        verify(productRepository).saveAll(Collections.emptyList());
+        // Service may legitimately call saveAll with an empty list (no-op) – do not assert 'never'.
     }
 
     @Test
@@ -642,7 +702,12 @@ class ProductControllerIntegrationTest {
         mockMvc.perform(put("/api/v1/products/bulk/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", containsString("Database error")))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/bulk/status")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findAllById(request.productIds());
     }
@@ -659,7 +724,12 @@ class ProductControllerIntegrationTest {
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/stock/reserve", productId)
                         .param("quantity", String.valueOf(quantity)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/stock/reserve")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
     }
@@ -676,24 +746,37 @@ class ProductControllerIntegrationTest {
         // When & Then
         mockMvc.perform(put("/api/v1/products/{id}/stock/release", productId)
                         .param("quantity", String.valueOf(quantity)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/stock/release")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
     }
 
-    @Test
-    @DisplayName("Confirm stock product not found - Returns 404")
-    void confirmStockProductNotFound() throws Exception {
-        // Given
+        // Individual confirmStockProductNotFound test removed in favor of parameterized variant below
+
+    @ParameterizedTest(name = "{0} product not found - Returns 404")
+    @CsvSource({
+            "reserve,reserve",
+            "release,release",
+            "confirm,confirm"
+    })
+    void reserveReleaseConfirmNotFoundParameterized(String operation, String pathSuffix) throws Exception {
         var productId = "non-existent-id";
         int quantity = 5;
-
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        // When & Then
-        mockMvc.perform(put("/api/v1/products/{id}/stock/confirm", productId)
+        mockMvc.perform(put("/api/v1/products/{id}/stock/" + operation, productId)
                         .param("quantity", String.valueOf(quantity)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
+                .andExpect(jsonPath("$.message", containsString(productId)))
+                .andExpect(jsonPath("$.path", is("/api/v1/products/" + productId + "/stock/" + pathSuffix)))
+                .andExpect(jsonPath("$.timestamp", notNullValue()));
 
         verify(productRepository).findById(productId);
     }
