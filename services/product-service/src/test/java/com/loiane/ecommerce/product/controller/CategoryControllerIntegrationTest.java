@@ -8,7 +8,6 @@ import com.loiane.ecommerce.product.exception.DuplicateSlugException;
 import com.loiane.ecommerce.product.factory.CategoryDTOTestFactory;
 import com.loiane.ecommerce.product.factory.CategoryTestDataFactory;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
-import com.loiane.ecommerce.product.repository.ProductRepository;
 import com.loiane.ecommerce.product.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,10 +43,7 @@ class CategoryControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CategoryRepository categoryRepository;
-
-    @MockitoBean
-    private ProductRepository productRepository;
+    private CategoryRepository categoryRepository; // Still used indirectly via service for create/update flows
     
     @MockitoBean 
     private CategoryService categoryService;
@@ -59,7 +55,7 @@ class CategoryControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        reset(categoryRepository, productRepository, categoryService);
+    reset(categoryRepository, categoryService);
         
         rootCategoryId = UUID.randomUUID().toString();
         nonExistentId = UUID.randomUUID().toString();
@@ -74,7 +70,7 @@ class CategoryControllerIntegrationTest {
     void testGetAllCategories() throws Exception {
         // Given
         Category subCategory = CategoryTestDataFactory.createChild("Smartphones", rootCategoryEntity);
-        when(categoryRepository.findAll()).thenReturn(Arrays.asList(rootCategoryEntity, subCategory));
+    when(categoryService.listAll()).thenReturn(Arrays.asList(rootCategoryEntity, subCategory));
 
         // When & Then
         mockMvc.perform(get("/api/v1/categories"))
@@ -90,7 +86,7 @@ class CategoryControllerIntegrationTest {
                 .andExpect(jsonPath("$[1].name").value(subCategory.getName()))
                 .andExpect(jsonPath("$[1].slug").value(subCategory.getSlug()));
 
-        verify(categoryRepository).findAll();
+    verify(categoryService).listAll();
     }
 
     @Test
@@ -236,47 +232,39 @@ class CategoryControllerIntegrationTest {
     @DisplayName("DELETE /api/v1/categories/{id} - Should delete category successfully")
     void testDeleteCategorySuccess() throws Exception {
         // Given
-        when(categoryService.findById(rootCategoryId)).thenReturn(rootCategoryEntity);
-        when(categoryService.countActiveProductsInCategory(rootCategoryId)).thenReturn(0L);
-        doNothing().when(categoryRepository).delete(any(Category.class));
+    doNothing().when(categoryService).deleteCategory(rootCategoryId);
 
         // When & Then
         mockMvc.perform(delete("/api/v1/categories/" + rootCategoryId))
                 .andExpect(status().isNoContent());
 
-        verify(categoryService).findById(rootCategoryId);
-        verify(categoryService).countActiveProductsInCategory(rootCategoryId);
-        verify(categoryRepository).delete(rootCategoryEntity);
+    verify(categoryService).deleteCategory(rootCategoryId);
     }
 
     @Test
     @DisplayName("DELETE /api/v1/categories/{id} - Should return 409 when category has active products")
     void testDeleteCategoryHasActiveProducts() throws Exception {
         // Given
-        when(categoryService.findById(rootCategoryId)).thenReturn(rootCategoryEntity);
-        when(categoryService.countActiveProductsInCategory(rootCategoryId)).thenReturn(5L);
+    doThrow(new com.loiane.ecommerce.product.exception.CategoryDeletionConflictException("Cannot delete category with active products"))
+        .when(categoryService).deleteCategory(rootCategoryId);
 
         // When & Then
         mockMvc.perform(delete("/api/v1/categories/" + rootCategoryId))
                 .andExpect(status().isConflict());
 
-        verify(categoryService).findById(rootCategoryId);
-        verify(categoryService).countActiveProductsInCategory(rootCategoryId);
-        verify(categoryRepository, never()).delete(any(Category.class));
+    verify(categoryService).deleteCategory(rootCategoryId);
     }
 
     @Test
     @DisplayName("DELETE /api/v1/categories/{id} - Should return 404 when category not found")
     void testDeleteCategoryNotFound() throws Exception {
         // Given
-        when(categoryService.findById(nonExistentId)).thenThrow(new CategoryNotFoundException("Category not found"));
+    doThrow(new CategoryNotFoundException("Category not found")).when(categoryService).deleteCategory(nonExistentId);
 
         // When & Then
         mockMvc.perform(delete("/api/v1/categories/" + nonExistentId))
                 .andExpect(status().isNotFound());
 
-        verify(categoryService).findById(nonExistentId);
-        verify(categoryService, never()).countActiveProductsInCategory(anyString());
-        verify(categoryRepository, never()).delete(any(Category.class));
+    verify(categoryService).deleteCategory(nonExistentId);
     }
 }

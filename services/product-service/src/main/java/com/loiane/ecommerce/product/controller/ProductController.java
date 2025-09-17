@@ -3,7 +3,6 @@ package com.loiane.ecommerce.product.controller;
 import com.loiane.ecommerce.product.dto.product.*;
 import com.loiane.ecommerce.product.exception.BulkProductsNotFoundException;
 import com.loiane.ecommerce.product.mapper.ProductMapper;
-import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -21,12 +20,9 @@ public class ProductController {
 
     private final ProductService productService;
     private final ProductMapper productMapper;
-    private final CategoryRepository categoryRepository;
-
-    public ProductController(ProductService productService, ProductMapper productMapper, CategoryRepository categoryRepository) {
+    public ProductController(ProductService productService, ProductMapper productMapper) {
         this.productService = productService;
         this.productMapper = productMapper;
-        this.categoryRepository = categoryRepository;
     }
 
     @GetMapping("/{id}")
@@ -62,11 +58,7 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
-        var entity = productMapper.toEntity(request);
-        var category = categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
-        entity.setCategory(category);
-        var savedEntity = productService.createProduct(entity);
+        var savedEntity = productService.createProduct(request);
         var response = productMapper.toResponse(savedEntity);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -75,9 +67,7 @@ public class ProductController {
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable String id,
             @Valid @RequestBody UpdateProductRequest request) {
-        var existingProduct = productService.findById(id);
-        productMapper.updateEntity(existingProduct, request);
-        var updatedEntity = productService.updateProduct(id, existingProduct);
+        var updatedEntity = productService.updateProduct(id, request);
         var response = productMapper.toResponse(updatedEntity);
         return ResponseEntity.ok(response);
     }

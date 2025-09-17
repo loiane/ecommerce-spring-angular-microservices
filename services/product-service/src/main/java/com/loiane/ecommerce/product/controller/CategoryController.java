@@ -1,9 +1,7 @@
 package com.loiane.ecommerce.product.controller;
 
 import com.loiane.ecommerce.product.dto.category.*;
-import com.loiane.ecommerce.product.exception.CategoryDeletionConflictException; // Specific conflict exception
 import com.loiane.ecommerce.product.mapper.CategoryMapper;
-import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,17 +16,14 @@ public class CategoryController {
 
     private final CategoryService categoryService;
     private final CategoryMapper categoryMapper;
-    private final CategoryRepository categoryRepository;
-
-    public CategoryController(CategoryService categoryService, CategoryMapper categoryMapper, CategoryRepository categoryRepository) {
+    public CategoryController(CategoryService categoryService, CategoryMapper categoryMapper) {
         this.categoryService = categoryService;
         this.categoryMapper = categoryMapper;
-        this.categoryRepository = categoryRepository;
     }
 
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        var categories = categoryRepository.findAll(); // Use repository directly since service method returns hierarchy
+        var categories = categoryService.listAll();
         var response = categoryMapper.toResponseList(categories);
         return ResponseEntity.ok(response);
     }
@@ -61,13 +56,7 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
-        // Count check & delete logic should move to service eventually
-        var category = categoryService.findById(id);
-        long productCount = categoryService.countActiveProductsInCategory(id);
-        if (productCount > 0) {
-            throw new CategoryDeletionConflictException("Cannot delete category with active products");
-        }
-        categoryRepository.delete(category);
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 }

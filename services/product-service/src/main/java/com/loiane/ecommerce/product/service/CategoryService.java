@@ -3,6 +3,7 @@ package com.loiane.ecommerce.product.service;
 import com.loiane.ecommerce.product.entity.Category;
 import com.loiane.ecommerce.product.entity.ProductStatus;
 import com.loiane.ecommerce.product.exception.CategoryNotFoundException;
+import com.loiane.ecommerce.product.exception.CategoryDeletionConflictException;
 import com.loiane.ecommerce.product.exception.DuplicateSlugException;
 import com.loiane.ecommerce.product.exception.IllegalOperationException;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
@@ -66,6 +67,13 @@ public class CategoryService {
         // For simplicity, return root categories
         // In a more complex implementation, you might want to load children recursively
         return categoryRepository.findRootCategories();
+    }
+
+    /**
+     * Returns all categories (flat) – used by controller list endpoint previously calling the repository directly.
+     */
+    public List<Category> listAll() {
+        return categoryRepository.findAll();
     }
 
     // UPDATE OPERATIONS
@@ -145,5 +153,16 @@ public class CategoryService {
     public long countActiveProductsInCategory(String categoryId) {
         Category category = findById(categoryId);
         return productRepository.countByCategoryAndStatus(category, ProductStatus.ACTIVE);
+    }
+
+    // DELETE OPERATIONS
+    @Transactional
+    public void deleteCategory(String id) {
+        Category category = findById(id);
+        long activeProducts = productRepository.countByCategoryAndStatus(category, ProductStatus.ACTIVE);
+        if (activeProducts > 0) {
+            throw new CategoryDeletionConflictException("Cannot delete category with active products");
+        }
+        categoryRepository.delete(category);
     }
 }

@@ -83,26 +83,61 @@ public class GlobalExceptionHandler {
 ```
 
 ---
-## 2. Controller → Service Cohesion
+## 2. Controller → Service Cohesion ✅ (Completed)
 **Goal:** All business rules live in services. Controllers = thin request/response mappers.
 
-### Action Items
-- Remove repository injections from controllers.
-- Delegate delete logic, existence checks, and validation to services.
-- Ensure mappers convert DTO⇄Entity; controllers should not mutate entities directly.
+### Implemented Changes
+| Area | Before | After |
+|------|--------|-------|
+| Product creation/update | Controllers performed some validation & direct repository interaction | Added `createProduct(CreateProductRequest)` and `updateProduct(String, UpdateProductRequest)` in `ProductService`; controllers now delegate entirely |
+| Category operations | Controller listed & deleted categories via repositories | Added `listAll()` and `deleteCategory(String)` to `CategoryService`; controller delegates |
+| Deletion guard | Ad‑hoc / missing centralized rule | Centralized active product guard in `CategoryService#deleteCategory` throwing `CategoryDeletionConflictException` |
+| Error paths | Mixed (some 400 vs 404) | Aligned with domain exceptions (`CategoryNotFoundException`, etc.) via global handler |
+| Tests | Coupled to repository interaction counts inside controllers | Updated to assert service behaviors & HTTP results, reducing brittle interaction verifications |
 
-### Sample: Category deletion in `CategoryService`
+### Key Service Additions
 ```java
+// ProductService (new overload)
+public Product createProduct(CreateProductRequest request) {
+    if (productRepository.existsBySku(request.sku())) {
+        throw new DuplicateSkuException("Product with SKU " + request.sku() + " already exists");
+    }
+    Category category = categoryRepository.findById(request.categoryId())
+            .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.categoryId()));
+    if (!category.isActive()) {
+        throw new InactiveCategoryException("Cannot add product to inactive category");
+    }
+    Product entity = productMapper.toEntity(request, category);
+    entity.stampCreation();
+    return productRepository.save(entity);
+}
+
+// CategoryService (new list & delete)
+public List<Category> listAll() { return categoryRepository.findAll(); }
+
 @Transactional
 public void deleteCategory(String id) {
-    Category category = findById(id); // existing method or reuse repository + mapper
+    Category category = categoryRepository.findById(id)
+            .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
     long active = productRepository.countByCategoryAndStatus(category, ProductStatus.ACTIVE);
     if (active > 0) {
-        throw new IllegalOperationException("Cannot delete category with active products");
+        throw new CategoryDeletionConflictException("Cannot delete category with active products");
     }
     categoryRepository.delete(category);
 }
 ```
+
+### Outcomes
+- Controllers now contain only: request validation annotations, delegation to service, mapping to response DTOs.
+- Reduced duplicate repository invocations (each fetch now performed once in service layer).
+- Consistent exception flow → global handler → standardized `ApiError`.
+- Tests stabilized (all passing) after updating expectations to new delegation model.
+
+### Follow-up (Planned in Mapper Task)
+- Remove any residual manual field assignment in services once mappers are fully comprehensive.
+- Introduce unit tests validating mapper coverage to prevent regression into controller logic.
+
+No further action required for this item.
 
 ---
 ## 3. Complete Mapper Implementations
@@ -285,11 +320,11 @@ docker compose up --build
 ---
 ## Validation Checklist (tick as you implement)
 - [x] Global exception handler active
-- [ ] Controllers free of repository access
+- [x] Controllers free of repository access
 - [ ] Mappers fully implemented & tested
 - [ ] Flyway baseline applied successfully
 - [ ] OpenAPI UI reachable (`/swagger-ui.html` or `/swagger-ui/index.html`)
-- [ ] Integration tests green in CI
+- [ ] Integration tests green in CI (current local run green)
 - [ ] Angular consumes live product list
 - [ ] Error interceptor shows validation errors
 - [ ] Filtering endpoints implemented

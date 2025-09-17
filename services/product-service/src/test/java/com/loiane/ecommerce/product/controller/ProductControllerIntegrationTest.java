@@ -156,7 +156,7 @@ class ProductControllerIntegrationTest {
                 .andExpect(jsonPath("$.id", is(PRODUCT_ID)))
                 .andExpect(jsonPath("$.name", is(GAMING_LAPTOP_NAME)));
 
-        verify(categoryRepository, times(2)).findById(CATEGORY_ID); // Called by both controller and service
+        verify(categoryRepository, times(1)).findById(CATEGORY_ID); // Now only service layer performs lookup
         verify(productRepository).existsBySku("NEW-LAPTOP-001");
         verify(productRepository).save(any(Product.class));
     }
@@ -190,7 +190,8 @@ class ProductControllerIntegrationTest {
                 .andExpect(jsonPath("$.path", is("/api/v1/products")))
                 .andExpect(jsonPath("$.timestamp", notNullValue()));
 
-        verify(categoryRepository).findById(CATEGORY_ID); // Only controller calls it, service throws exception before validation
+        // Service short-circuits on duplicate SKU before category lookup
+        verify(categoryRepository, never()).findById(CATEGORY_ID);
         verify(productRepository).existsBySku(GAMING_LAPTOP_SKU);
         verify(productRepository, never()).save(any(Product.class));
     }
@@ -217,7 +218,7 @@ class ProductControllerIntegrationTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is(PRODUCT_ID)));
 
-        verify(productRepository, times(2)).findById(PRODUCT_ID); // Called by both controller and service
+        verify(productRepository, times(1)).findById(PRODUCT_ID); // Single lookup in service layer
         verify(productRepository).save(any(Product.class));
     }
 
@@ -433,21 +434,22 @@ class ProductControllerIntegrationTest {
                 true
         );
 
+        when(productRepository.existsBySku("test-sku-123")).thenReturn(false);
         when(categoryRepository.findById("invalid-category-id")).thenReturn(Optional.empty());
 
         // When & Then
         mockMvc.perform(post("/api/v1/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.error", is("Not Found")))
                 .andExpect(jsonPath("$.message", containsString("Category not found")))
                 .andExpect(jsonPath("$.path", is("/api/v1/products")))
                 .andExpect(jsonPath("$.timestamp", notNullValue()));
 
-        verify(categoryRepository).findById("invalid-category-id");
-        verifyNoInteractions(productRepository);
+                verify(productRepository).existsBySku("test-sku-123");
+                verify(categoryRepository).findById("invalid-category-id");
     }
 
     @Test
