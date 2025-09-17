@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - include:
+      file: shared-000-create-schemas.yaml
+      relativeToChangelogFile: true

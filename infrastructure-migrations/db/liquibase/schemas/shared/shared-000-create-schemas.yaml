@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: shared-000-create-schemas
+      author: loiane
+      labels: bootstrap
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              CREATE SCHEMA IF NOT EXISTS shared;
+              CREATE SCHEMA IF NOT EXISTS product;
+              CREATE SCHEMA IF NOT EXISTS inventory;

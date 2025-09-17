@@ -1,0 +1,5 @@
+databaseChangeLog:
+  - property:
+      name: schemaName
+      value: ${inventorySchema}
+  # Add includes for tables, data, views, functions as you expand

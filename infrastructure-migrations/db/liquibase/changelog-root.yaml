@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - preConditions:
+      - include:
+          file: db/liquibase/includes/preconditions/assert-postgres.yaml
+  - include:
+      file: db/liquibase/schemas/shared/changelog-shared.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: db/liquibase/schemas/product/changelog-product.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: db/liquibase/schemas/inventory/changelog-inventory.yaml
+      relativeToChangelogFile: true
