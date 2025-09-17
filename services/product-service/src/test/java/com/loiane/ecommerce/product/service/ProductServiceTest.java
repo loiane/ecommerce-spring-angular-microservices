@@ -17,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -45,7 +44,6 @@ class ProductServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
-    @InjectMocks
     private ProductService productService;
 
     private Product testProduct;
@@ -55,29 +53,30 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
-        TestDataFactory.resetCounter();
-        
-        productId = "test-product-id";
-        categoryId = "test-category-id";
+    TestDataFactory.resetCounter();
+    productId = "test-product-id";
+    categoryId = "test-category-id";
 
-        testCategory = CategoryTestDataFactory.aCategory()
-                .withName("Electronics")
-                .withSlug("electronics")
-                .thatIsActive()
-                .build();
-        testCategory.setId(categoryId); // Set ID after building
+    testCategory = CategoryTestDataFactory.aCategory()
+        .withName("Electronics")
+        .withSlug("electronics")
+        .thatIsActive()
+        .build();
+    testCategory.setId(categoryId); // Set ID after building
 
-        testProduct = ProductTestDataFactory.aProduct()
-                .withName("Test Product")
-                .withDescription("Test Description")
-                .withSku("TEST-001")
-                .withPrice("99.99")
-                .withStock(100)
-                .withReservedStock(0)
-                .withLowStockThreshold(10)
-                .thatIsActive()
-                .withCategory(testCategory)
-                .build();
+    testProduct = ProductTestDataFactory.aProduct()
+        .withName("Test Product")
+        .withDescription("Test Description")
+        .withSku("TEST-001")
+        .withPrice("99.99")
+        .withStock(100)
+        .withReservedStock(0)
+        .withLowStockThreshold(10)
+        .thatIsActive()
+        .withCategory(testCategory)
+        .build();
+
+    productService = new ProductService(productRepository, categoryRepository, new com.loiane.ecommerce.product.mapper.ProductMapper());
         testProduct.setId(productId); // Set ID after building
         // Set additional fields not in builder
         testProduct.setShortDescription("Short description");

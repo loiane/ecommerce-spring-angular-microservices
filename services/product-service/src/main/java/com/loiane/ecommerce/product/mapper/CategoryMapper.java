@@ -9,6 +9,16 @@ import java.util.List;
 
 @Component
 public class CategoryMapper {
+    /**
+     * Merges non-null fields from patch into target, respecting immutable fields (id, slug).
+     */
+    public void merge(Category target, Category patch) {
+        if (target == null || patch == null) return;
+        if (patch.getName() != null) target.setName(patch.getName());
+        if (patch.getDescription() != null) target.setDescription(patch.getDescription());
+        if (patch.getDisplayOrder() != null) target.setDisplayOrder(patch.getDisplayOrder());
+        // Parent/level/isActive not patched here (business logic)
+    }
     
     public CategoryResponse toResponse(Category category) {
         if (category == null) return null;

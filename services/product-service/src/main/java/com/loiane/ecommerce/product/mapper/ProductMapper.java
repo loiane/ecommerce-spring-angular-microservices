@@ -11,6 +11,21 @@ import java.util.List;
 
 @Component
 public class ProductMapper {
+    /**
+     * Merges non-null fields from patch into target, respecting immutable fields (id, sku).
+     */
+    public void merge(Product target, Product patch) {
+        if (target == null || patch == null) return;
+        // Do not allow id/sku changes
+        if (patch.getName() != null) target.setName(patch.getName());
+        if (patch.getDescription() != null) target.setDescription(patch.getDescription());
+        if (patch.getShortDescription() != null) target.setShortDescription(patch.getShortDescription());
+        if (patch.getBasePrice() != null) target.setBasePrice(patch.getBasePrice());
+        if (patch.getStockQuantity() != null) target.setStockQuantity(patch.getStockQuantity());
+        if (patch.getLowStockThreshold() != null) target.setLowStockThreshold(patch.getLowStockThreshold());
+        if (patch.getTrackInventory() != null) target.setTrackInventory(patch.getTrackInventory());
+        // Category/status/publishedAt not patched here (business logic)
+    }
     
     public ProductResponse toResponse(Product product) {
         if (product == null) return null;

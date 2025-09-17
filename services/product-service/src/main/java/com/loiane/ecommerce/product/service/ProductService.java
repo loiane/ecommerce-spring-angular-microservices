@@ -118,21 +118,11 @@ public class ProductService {
     @Transactional
     public Product updateProduct(String id, Product updatedData) {
         Product existingProduct = findById(id);
-
         // Validate SKU cannot be changed
         if (updatedData.getSku() != null && !updatedData.getSku().equals(existingProduct.getSku())) {
             throw new IllegalOperationException("SKU cannot be changed");
         }
-
-        // Update allowed fields
-        if (updatedData.getName() != null) existingProduct.setName(updatedData.getName());
-        if (updatedData.getDescription() != null) existingProduct.setDescription(updatedData.getDescription());
-        if (updatedData.getShortDescription() != null) existingProduct.setShortDescription(updatedData.getShortDescription());
-        if (updatedData.getBasePrice() != null) existingProduct.setBasePrice(updatedData.getBasePrice());
-        if (updatedData.getStockQuantity() != null) existingProduct.setStockQuantity(updatedData.getStockQuantity());
-        if (updatedData.getLowStockThreshold() != null) existingProduct.setLowStockThreshold(updatedData.getLowStockThreshold());
-        if (updatedData.getTrackInventory() != null) existingProduct.setTrackInventory(updatedData.getTrackInventory());
-
+        productMapper.merge(existingProduct, updatedData);
         existingProduct.setUpdatedAt(OffsetDateTime.now());
         return productRepository.save(existingProduct);
     }

@@ -9,11 +9,11 @@ import com.loiane.ecommerce.product.factory.CategoryTestDataFactory;
 import com.loiane.ecommerce.product.factory.TestDataFactory;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.repository.ProductRepository;
+import com.loiane.ecommerce.product.mapper.CategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,8 +33,7 @@ class CategoryServiceTest {
     @Mock
     private ProductRepository productRepository;
 
-    @InjectMocks
-    private CategoryService categoryService;
+    private CategoryService categoryService; // will be manually instantiated with real mapper
 
     private Category rootCategory;
     private Category childCategory;
@@ -68,6 +67,9 @@ class CategoryServiceTest {
                 .withDisplayOrder(1)
                 .build();
         childCategory.setId(childId); // Set ID after building
+
+        // Manually construct service with real mapper instance
+        categoryService = new CategoryService(categoryRepository, productRepository, new CategoryMapper());
     }
 
     // CREATE OPERATIONS

@@ -21,10 +21,12 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final com.loiane.ecommerce.product.mapper.CategoryMapper categoryMapper;
 
-    public CategoryService(CategoryRepository categoryRepository, ProductRepository productRepository) {
+    public CategoryService(CategoryRepository categoryRepository, ProductRepository productRepository, com.loiane.ecommerce.product.mapper.CategoryMapper categoryMapper) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.categoryMapper = categoryMapper;
     }
 
     // CREATE OPERATIONS
@@ -80,24 +82,12 @@ public class CategoryService {
     @Transactional
     public Category updateCategory(String id, Category updateData) {
         Category existingCategory = findById(id);
-
         // Validate slug cannot be changed
         if (updateData.getSlug() != null && !updateData.getSlug().equals(existingCategory.getSlug())) {
             throw new IllegalOperationException("Category slug cannot be changed");
         }
-
-        // Update allowed fields
-        if (updateData.getName() != null) {
-            existingCategory.setName(updateData.getName());
-        }
-        if (updateData.getDescription() != null) {
-            existingCategory.setDescription(updateData.getDescription());
-        }
-        if (updateData.getDisplayOrder() != null) {
-            existingCategory.setDisplayOrder(updateData.getDisplayOrder());
-        }
-
-        existingCategory.setUpdatedAt(OffsetDateTime.now());
+    categoryMapper.merge(existingCategory, updateData);
+        existingCategory.setUpdatedAt(java.time.OffsetDateTime.now());
         return categoryRepository.save(existingCategory);
     }
 
