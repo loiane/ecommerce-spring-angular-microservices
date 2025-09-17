@@ -148,6 +148,48 @@ No further action required for this item.
 - Provide null-safety and defensive copies for collections where needed.
 - Add unit tests covering mapping round-trips.
 
+### Current Status (Progress Added)
+Core merge helpers implemented for both `ProductMapper` and `CategoryMapper`. Initial merge tests existed; expanded comprehensive test coverage has been added (entity→DTO, DTO→entity, list mapping, updateEntity partial updates, null safety, merge immutability).
+
+### Test Coverage Implemented
+ProductMapperTests now validate:
+- `merge` honors non-null fields and ignores immutable `sku`.
+- `toEntity` with full data (defaults: status INACTIVE, reservedQuantity 0, default lowStockThreshold when null).
+- `toEntity` default handling for null optional inputs.
+- `toResponse` field mapping including nested `CategorySummary`.
+- `toResponseList` null → empty list safety.
+- `updateEntity` selective update semantics.
+- Null safety for merge with null target/patch.
+
+CategoryMapperTests now validate:
+- `merge` selective field copy (name, description, displayOrder only).
+- `toEntity` mapping + defaults (active=true, level=0, displayOrder default 0).
+- `toResponse` includes parent summary and timestamps.
+- `toResponseList` null → empty list safety.
+- `updateEntity` selective update semantics.
+- Null safety on merge operations.
+
+### Planned DTO Enhancements (Upcoming)
+- `ProductSummaryResponse`: compact list card: `id`, `name`, `sku`, `basePrice`, `status`, `stockQuantity`, `reservedQuantity`, `lowStockThreshold`, computed `availableStock` & `lowStock` boolean.
+- `ProductInventoryDeltaResponse`: minimal payload for stock reservation/release endpoints (avoid returning full product on stock-only operations).
+- `CategoryTreeNodeResponse`: trimmed recursive structure (`id`, `name`, `slug`, `childrenCount`, optional shallow children list) for navigation menus.
+- Standardized inclusion of `createdAt` / `updatedAt` on all outward product + category responses (audit to ensure consistency already mostly satisfied; confirm after new DTOs added).
+- Consider `ProductPublishResponse` specialized minimal response when publishing/discontinuing product.
+
+### Next Steps (Mapper Roadmap Continuation)
+1. Scan services/controllers for residual manual entity field assignments (move into mapper where appropriate) – pending.
+2. Introduce new DTOs above and implement mapper methods + tests.
+3. Add computed helpers (e.g., `availableStock = stockQuantity - reservedQuantity`, `isLowStock`) inside mapper or a dedicated `ProductViewAssembler` to keep mapper pure if logic grows.
+4. Update controller endpoints returning large product lists to optionally use `ProductSummaryResponse` for pagination endpoints to reduce payload size.
+5. Strengthen negative tests: verify immutable fields (`id`, `slug`, `sku`) not mutated by merge helpers.
+
+### Acceptance Criteria for Completion
+- Zero manual entity→response mapping code in services/controllers (except trivial wrappers or business decisions about which DTO to use).
+- All collection mappings null-safe (never return null lists).
+- New DTOs documented and covered by unit tests (≥90% lines in mapper classes, but more importantly branch coverage for conditional merges).
+- Merge helpers guarantee immutability of primary identifiers (id, sku, slug) – proven by explicit tests.
+
+
 ---
 ## 4. OpenAPI (springdoc) Documentation
 **Goal:** Auto-generate API docs for internal + frontend consumption.
