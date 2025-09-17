@@ -131,4 +131,22 @@ class CategoryMapperTests {
         mapper.merge(new Category(), null);
         mapper.merge(null, new Category());
     }
+
+    @Test
+    void merge_shouldNotChangeIdOrSlug() {
+        Category target = new Category();
+        target.setId("cat-1");
+        target.setSlug("original-slug");
+        target.setName("Old");
+
+        Category patch = new Category();
+        patch.setId("cat-2");
+        patch.setSlug("new-slug");
+        patch.setName("New");
+
+        new CategoryMapper().merge(target, patch);
+        assertEquals("cat-1", target.getId(), "ID must remain unchanged");
+        assertEquals("original-slug", target.getSlug(), "Slug must remain unchanged");
+        assertEquals("New", target.getName());
+    }
 }

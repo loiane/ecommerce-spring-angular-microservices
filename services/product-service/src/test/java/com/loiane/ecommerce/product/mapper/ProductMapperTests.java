@@ -173,4 +173,22 @@ class ProductMapperTests {
         new ProductMapper().merge(target, null); // no change
         new ProductMapper().merge(null, new Product()); // safe
     }
+
+    @Test
+    void merge_shouldNotChangeIdOrSku() {
+        Product target = new Product();
+        target.setId("id-123");
+        target.setSku("SKU-ORIGINAL");
+        target.setName("Old");
+
+        Product patch = new Product();
+        patch.setId("other-id");
+        patch.setSku("NEW-SKU");
+        patch.setName("New");
+
+        new ProductMapper().merge(target, patch);
+        assertEquals("id-123", target.getId(), "ID must remain unchanged");
+        assertEquals("SKU-ORIGINAL", target.getSku(), "SKU must remain unchanged");
+        assertEquals("New", target.getName());
+    }
 }
