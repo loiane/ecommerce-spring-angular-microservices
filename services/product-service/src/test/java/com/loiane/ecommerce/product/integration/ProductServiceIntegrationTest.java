@@ -6,6 +6,8 @@ import com.loiane.ecommerce.product.entity.Product;
 import com.loiane.ecommerce.product.entity.ProductStatus;
 import com.loiane.ecommerce.product.repository.CategoryRepository;
 import com.loiane.ecommerce.product.repository.ProductRepository;
+import com.loiane.ecommerce.product.service.CategoryService;
+import com.loiane.ecommerce.product.exception.CategoryDeletionConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,11 +30,15 @@ class ProductServiceIntegrationTest extends AbstractPostgresIT {
 
     private Category category;
 
+    @Autowired
+    private CategoryService categoryService;
+
     @BeforeEach
     void setup() {
+        String randomSlug = "electronics-" + UUID.randomUUID();
         category = Category.builder()
                 .name("Electronics")
-                .slug("electronics")
+                .slug(randomSlug)
                 .level(0)
                 .displayOrder(1)
                 .build();
@@ -40,9 +47,10 @@ class ProductServiceIntegrationTest extends AbstractPostgresIT {
 
     @Test
     void testCreateProduct() {
+        String randomSku = "SKU-" + UUID.randomUUID();
         Product product = Product.builder()
                 .name("Laptop")
-                .sku("SKU-001")
+                .sku(randomSku)
                 .basePrice(BigDecimal.valueOf(1000))
                 .status(ProductStatus.ACTIVE)
                 .category(category)
@@ -51,34 +59,36 @@ class ProductServiceIntegrationTest extends AbstractPostgresIT {
                 .build();
         Product saved = productRepository.save(product);
         assertNotNull(saved.getId());
-        assertEquals("SKU-001", saved.getSku());
+        assertEquals(randomSku, saved.getSku());
     }
 
     @Test
     void testDuplicateSkuThrows() {
-        Product product1 = Product.builder()
-                .name("Laptop")
-                .sku("SKU-002")
-                .basePrice(BigDecimal.valueOf(1000))
-                .status(ProductStatus.ACTIVE)
-                .category(category)
-                .build();
-        productRepository.save(product1);
-        Product product2 = Product.builder()
-                .name("Monitor")
-                .sku("SKU-002")
-                .basePrice(BigDecimal.valueOf(200))
-                .status(ProductStatus.ACTIVE)
-                .category(category)
-                .build();
-        assertThrows(Exception.class, () -> productRepository.save(product2));
+    String randomSku = "SKU-" + UUID.randomUUID();
+    Product product1 = Product.builder()
+        .name("Laptop")
+        .sku(randomSku)
+        .basePrice(BigDecimal.valueOf(1000))
+        .status(ProductStatus.ACTIVE)
+        .category(category)
+        .build();
+    productRepository.save(product1);
+    Product product2 = Product.builder()
+        .name("Monitor")
+        .sku(randomSku)
+        .basePrice(BigDecimal.valueOf(200))
+        .status(ProductStatus.ACTIVE)
+        .category(category)
+        .build();
+    assertThrows(Exception.class, () -> productRepository.save(product2));
     }
 
     @Test
     void testStockIncreaseDecrease() {
+        String randomSku = "SKU-" + UUID.randomUUID();
         Product product = Product.builder()
                 .name("Mouse")
-                .sku("SKU-003")
+                .sku(randomSku)
                 .basePrice(BigDecimal.valueOf(50))
                 .status(ProductStatus.ACTIVE)
                 .category(category)
@@ -102,14 +112,15 @@ class ProductServiceIntegrationTest extends AbstractPostgresIT {
     @Test
     @Transactional
     void testCategoryDeletionBlockedByActiveProducts() {
+        String randomSku = "SKU-" + UUID.randomUUID();
         Product product = Product.builder()
                 .name("Keyboard")
-                .sku("SKU-004")
+                .sku(randomSku)
                 .basePrice(BigDecimal.valueOf(80))
                 .status(ProductStatus.ACTIVE)
                 .category(category)
                 .build();
         productRepository.save(product);
-        assertThrows(Exception.class, () -> categoryRepository.delete(category));
+        assertThrows(CategoryDeletionConflictException.class, () -> categoryService.deleteCategory(category.getId()));
     }
 }
